@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Caixa & Fiado Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box}body{font-family:Inter,sans-serif}.safe-bottom{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
+    .hide-scroll::-webkit-scrollbar{display:none}.modal{animation:fade .18s ease}.card{animation:up .22s ease}
+    @keyframes fade{from{opacity:0}to{opacity:1}}@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-indigo-500">
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] hidden max-w-[92%] rounded-xl px-4 py-3 text-sm shadow-2xl"></div>
+
+  <!-- LOGIN -->
+  <section id="auth-screen" class="min-h-screen flex items-center justify-center p-5 bg-[radial-gradient(circle_at_top,#3730a3_0,#0f172a_38%,#020617_100%)]">
+    <div class="w-full max-w-sm card">
+      <div class="text-center mb-7">
+        <div class="mx-auto w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-xl mb-4"><i class="fa-solid fa-wallet text-2xl text-indigo-300"></i></div>
+        <h1 class="text-2xl font-extrabold">Caixa & Fiado</h1><p class="text-sm text-slate-400 mt-1">Seus dados protegidos e organizados</p>
+      </div>
+      <form id="login-form" class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur">
+        <label class="text-xs font-semibold text-slate-400">E-mail</label>
+        <input id="login-email" type="email" required autocomplete="email" placeholder="seu@email.com" class="mt-1 mb-4 w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
+        <label class="text-xs font-semibold text-slate-400">Senha</label>
+        <div class="relative mt-1 mb-3"><input id="login-senha" type="password" required minlength="6" autocomplete="current-password" placeholder="Sua senha" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 pr-12 outline-none focus:border-indigo-500"><button type="button" id="toggle-senha" class="absolute right-0 top-0 h-full px-4 text-slate-400" aria-label="Mostrar senha"><i class="fa-regular fa-eye"></i></button></div>
+        <button type="button" id="esqueci" class="text-xs text-indigo-400 hover:text-indigo-300 mb-5">Esqueci minha senha</button>
+        <button id="entrar" class="w-full rounded-xl py-3 bg-indigo-600 hover:bg-indigo-500 font-bold shadow-lg shadow-indigo-900/40"><i class="fa-solid fa-right-to-bracket mr-2"></i>Entrar</button>
+        <p class="text-[11px] text-center text-slate-500 mt-4">Contas novas são liberadas pelo proprietário.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- APLICATIVO -->
+  <div id="app" class="hidden max-w-5xl mx-auto min-h-screen bg-slate-950">
+    <header class="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800">
+      <div class="p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center"><i class="fa-solid fa-wallet"></i></div><div><h1 class="font-bold leading-tight">Caixa & Fiado</h1><p id="usuario-email" class="text-[10px] text-slate-500 max-w-44 truncate"></p></div></div>
+        <div class="flex gap-2"><button id="atualizar" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800" title="Atualizar"><i class="fa-solid fa-rotate"></i></button><button id="sair" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 text-rose-400" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button></div>
+      </div>
+      <nav class="grid grid-cols-3 px-4 gap-2 pb-3 text-xs font-semibold">
+        <button data-tab="inicio" class="tab rounded-xl py-2.5 bg-indigo-600"><i class="fa-solid fa-house mr-1"></i> Início</button>
+        <button data-tab="movimentos" class="tab rounded-xl py-2.5 bg-slate-900"><i class="fa-solid fa-receipt mr-1"></i> Histórico</button>
+        <button data-tab="arquivados" class="tab rounded-xl py-2.5 bg-slate-900"><i class="fa-solid fa-box-archive mr-1"></i> Arquivados</button>
+      </nav>
+    </header>
+
+    <main class="p-4 safe-bottom">
+      <section id="tab-inicio">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <article class="col-span-2 rounded-3xl p-5 bg-gradient-to-br from-indigo-600 to-violet-700 shadow-xl"><p class="text-xs text-indigo-100 uppercase tracking-wider">Total a receber</p><h2 id="total-fiado" class="text-3xl font-extrabold mt-1">R$ 0,00</h2><p id="devedores" class="text-xs text-indigo-200 mt-3">0 clientes devedores</p></article>
+          <article class="rounded-2xl p-4 bg-slate-900 border border-slate-800"><i class="fa-solid fa-circle-arrow-down text-emerald-400"></i><p class="text-[10px] text-slate-500 mt-3">RECEBIDO NO MÊS</p><strong id="recebido-mes" class="text-emerald-400">R$ 0,00</strong></article>
+          <article class="rounded-2xl p-4 bg-slate-900 border border-slate-800"><i class="fa-solid fa-triangle-exclamation text-amber-400"></i><p class="text-[10px] text-slate-500 mt-3">DÍVIDAS ATRASADAS</p><strong id="atrasadas" class="text-amber-400">R$ 0,00</strong></article>
+        </div>
+        <div class="flex gap-2 mb-4"><div class="relative flex-1"><i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-xs text-slate-500"></i><input id="busca" placeholder="Buscar cliente..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-3 py-3 text-sm outline-none focus:border-indigo-500"></div><button id="novo-cliente" class="rounded-xl px-4 bg-indigo-600 font-bold" title="Novo cliente"><i class="fa-solid fa-user-plus"></i><span class="hidden sm:inline ml-2">Novo</span></button></div>
+        <div class="flex justify-between mb-3"><h3 class="text-xs font-bold text-slate-400 uppercase">Clientes</h3><span id="contador" class="text-xs text-slate-500"></span></div>
+        <div id="lista-clientes" class="grid md:grid-cols-2 gap-3"></div>
+      </section>
+
+      <section id="tab-movimentos" class="hidden">
+        <div class="flex justify-between items-center mb-4"><div><h2 class="font-bold text-xl">Histórico geral</h2><p class="text-xs text-slate-500">Compras e pagamentos registrados</p></div><select id="filtro-tipo" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs"><option value="">Todos</option><option value="FIADO">Fiados</option><option value="PAGAMENTO">Pagamentos</option></select></div>
+        <div id="lista-movimentos" class="space-y-3"></div>
+      </section>
+      <section id="tab-arquivados" class="hidden"><h2 class="font-bold text-xl mb-1">Clientes arquivados</h2><p class="text-xs text-slate-500 mb-4">Eles podem ser restaurados sem perder o histórico.</p><div id="lista-arquivados" class="space-y-3"></div></section>
+    </main>
+  </div>
+
+  <!-- MODAIS -->
+  <div id="modal-cliente" class="modal fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm p-4 items-center justify-center"><form id="form-cliente" class="card w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6"><div class="flex justify-between mb-5"><h3 class="font-bold">Novo cliente</h3><button type="button" data-fechar="modal-cliente"><i class="fa-solid fa-xmark"></i></button></div><label class="label text-xs text-slate-400">Nome completo</label><input id="cliente-nome" required maxlength="100" class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><label class="text-xs text-slate-400">WhatsApp</label><input id="cliente-telefone" inputmode="tel" maxlength="16" placeholder="(00) 00000-0000" class="mt-1 mb-5 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><button class="w-full bg-indigo-600 rounded-xl py-3 font-bold">Cadastrar cliente</button></form></div>
+
+  <div id="modal-lancamento" class="modal fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm p-4 items-center justify-center"><form id="form-lancamento" class="card w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6"><div class="flex justify-between mb-5"><div><h3 class="font-bold">Nova movimentação</h3><p id="lancamento-cliente" class="text-xs text-slate-500"></p></div><button type="button" data-fechar="modal-lancamento"><i class="fa-solid fa-xmark"></i></button></div><input id="lancamento-cliente-id" type="hidden"><label class="text-xs text-slate-400">Tipo</label><select id="lancamento-tipo" class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><option value="FIADO">Adicionar dívida</option><option value="PAGAMENTO">Registrar pagamento</option></select><label class="text-xs text-slate-400">Valor</label><input id="lancamento-valor" type="number" inputmode="decimal" step="0.01" min="0.01" required class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><label class="text-xs text-slate-400">Descrição</label><input id="lancamento-descricao" maxlength="180" placeholder="Ex.: compras da semana" class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><div id="campo-vencimento"><label class="text-xs text-slate-400">Vencimento</label><input id="lancamento-vencimento" type="date" class="mt-1 mb-5 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"></div><button class="w-full bg-indigo-600 rounded-xl py-3 font-bold">Confirmar lançamento</button></form></div>
+
+  <div id="modal-detalhe" class="modal fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm p-3 items-end sm:items-center justify-center"><div class="card w-full max-w-lg max-h-[90vh] overflow-y-auto hide-scroll bg-slate-900 border border-slate-800 rounded-3xl p-5"><div class="flex justify-between mb-4"><div><h3 id="detalhe-nome" class="font-bold text-lg"></h3><a id="detalhe-tel" class="text-xs text-emerald-400"></a></div><button data-fechar="modal-detalhe"><i class="fa-solid fa-xmark"></i></button></div><div class="rounded-2xl p-4 bg-slate-950 border border-slate-800 mb-4 flex justify-between"><span class="text-sm text-slate-400">Saldo atual</span><strong id="detalhe-saldo" class="text-rose-400"></strong></div><div class="grid grid-cols-3 gap-2 mb-5"><button id="detalhe-lancar" class="bg-indigo-600 rounded-xl py-2.5 text-xs font-bold"><i class="fa-solid fa-plus"></i> Lançar</button><button id="detalhe-whats" class="bg-emerald-600 rounded-xl py-2.5 text-xs font-bold"><i class="fa-brands fa-whatsapp"></i> Cobrar</button><button id="detalhe-pdf" class="bg-slate-700 rounded-xl py-2.5 text-xs font-bold"><i class="fa-solid fa-file-pdf"></i> Extrato</button></div><h4 class="text-xs uppercase text-slate-500 font-bold mb-3">Movimentações</h4><div id="detalhe-movimentos" class="space-y-2"></div><button id="detalhe-arquivar" class="mt-5 w-full border border-rose-900 text-rose-400 rounded-xl py-3 text-xs font-bold"><i class="fa-solid fa-box-archive mr-1"></i> Arquivar cliente</button></div></div>
+
+  <script>
+  // PREENCHA APENAS COM A URL E A CHAVE ANON/PUBLISHABLE DO SEU SUPABASE.
+  // NUNCA coloque a chave service_role neste arquivo.
+  const SUPABASE_URL='SUA_URL_DO_SUPABASE_AQUI';
+  const SUPABASE_ANON_KEY='SUA_CHAVE_ANON_AQUI';
+  const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  let usuario=null,clientes=[],movimentos=[],clienteAberto=null;
+  const $=id=>document.getElementById(id);
+  const dinheiro=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const dataBR=v=>v?new Date(v+(v.length===10?'T12:00:00':'')).toLocaleDateString('pt-BR'):'';
+  const escapar=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  function toast(msg,tipo='ok'){const e=$('toast');e.textContent=msg;e.className=`fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-[92%] rounded-xl px-4 py-3 text-sm shadow-2xl ${tipo==='erro'?'bg-rose-600':'bg-emerald-600'}`;setTimeout(()=>e.classList.add('hidden'),3500)}
+  function modal(id,abrir=true){$(id).classList.toggle('hidden',!abrir);$(id).classList.toggle('flex',abrir)}
+  function carregando(btn,sim){btn.disabled=sim;btn.classList.toggle('opacity-60',sim)}
+
+  async function iniciar(){if(SUPABASE_URL.startsWith('SUA_')){toast('Configure a URL e a chave do Supabase no arquivo.','erro');return}const {data:{session}}=await db.auth.getSession();mostrarSessao(session);db.auth.onAuthStateChange((_e,s)=>mostrarSessao(s))}
+  function mostrarSessao(session){usuario=session?.user||null;$('auth-screen').classList.toggle('hidden',!!usuario);$('app').classList.toggle('hidden',!usuario);if(usuario){$('usuario-email').textContent=usuario.email;carregarTudo()}}
+  $('login-form').onsubmit=async e=>{e.preventDefault();const b=$('entrar');carregando(b,true);const {error}=await db.auth.signInWithPassword({email:$('login-email').value.trim(),password:$('login-senha').value});carregando(b,false);if(error)toast(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message,'erro')};
+  $('toggle-senha').onclick=()=>{const i=$('login-senha');i.type=i.type==='password'?'text':'password';$('toggle-senha').innerHTML=`<i class="fa-regular fa-eye${i.type==='text'?'-slash':''}"></i>`};
+  $('esqueci').onclick=async()=>{const email=$('login-email').value.trim();if(!email)return toast('Digite seu e-mail primeiro.','erro');const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});toast(error?error.message:'Enviamos o link de recuperação para seu e-mail.',error?'erro':'ok')};
+  $('sair').onclick=async()=>{await db.auth.signOut()};$('atualizar').onclick=()=>carregarTudo();
+
+  async function carregarTudo(){const [c,m]=await Promise.all([db.from('clientes').select('*').is('arquivado_em',null).order('nome'),db.from('movimentacoes').select('*,clientes(nome)').order('criado_em',{ascending:false}).limit(500)]);if(c.error||m.error)return toast((c.error||m.error).message,'erro');clientes=c.data||[];movimentos=m.data||[];renderTudo()}
+  function renderTudo(){renderClientes();renderMovimentos();renderResumo();renderArquivados()}
+  function statusCliente(c){const tx=movimentos.filter(m=>m.cliente_id===c.id&&m.tipo==='FIADO'&&!m.cancelado_em);const atras=tx.some(m=>m.vencimento&&m.vencimento<new Date().toISOString().slice(0,10))&&Number(c.saldo_devedor)>0;return atras?'Atrasado':Number(c.saldo_devedor)>0?'Pendente':'Em dia'}
+  function renderResumo(){const total=clientes.reduce((s,c)=>s+Number(c.saldo_devedor||0),0);const inicio=new Date();inicio.setDate(1);inicio.setHours(0,0,0,0);const recebido=movimentos.filter(m=>m.tipo==='PAGAMENTO'&&!m.cancelado_em&&new Date(m.criado_em)>=inicio).reduce((s,m)=>s+Number(m.valor),0);const atras=clientes.filter(c=>statusCliente(c)==='Atrasado').reduce((s,c)=>s+Number(c.saldo_devedor||0),0);$('total-fiado').textContent=dinheiro(total);$('devedores').textContent=`${clientes.filter(c=>Number(c.saldo_devedor)>0).length} clientes devedores`;$('recebido-mes').textContent=dinheiro(recebido);$('atrasadas').textContent=dinheiro(atras)}
+  function renderClientes(){const q=$('busca').value.toLowerCase().trim();const lista=clientes.filter(c=>c.nome.toLowerCase().includes(q));$('contador').textContent=`${lista.length} na lista`;$('lista-clientes').innerHTML=lista.length?lista.map(c=>{const st=statusCliente(c),cor=st==='Atrasado'?'amber':st==='Pendente'?'rose':'emerald';return `<button onclick="abrirDetalhe('${c.id}')" class="card text-left bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-2xl p-4 flex justify-between items-center"><div class="min-w-0"><h3 class="font-semibold truncate">${escapar(c.nome)}</h3><p class="text-xs text-slate-500 mt-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> ${escapar(c.telefone||'Sem telefone')}</p><span class="inline-block mt-2 text-[10px] text-${cor}-400 bg-${cor}-500/10 rounded-md px-2 py-1">${st}</span></div><strong class="${Number(c.saldo_devedor)>0?'text-rose-400':'text-emerald-400'}">${dinheiro(c.saldo_devedor)}</strong></button>`}).join(''):'<div class="col-span-2 text-center text-sm text-slate-500 py-12 border border-dashed border-slate-800 rounded-2xl">Nenhum cliente encontrado.</div>'}
+  function renderMovimentos(){const tipo=$('filtro-tipo').value;const lista=movimentos.filter(m=>!m.cancelado_em&&(!tipo||m.tipo===tipo));$('lista-movimentos').innerHTML=lista.length?lista.map(itemMovimento).join(''):'<p class="text-center text-slate-500 py-12">Nenhuma movimentação.</p>'}
+  function itemMovimento(m){const pag=m.tipo==='PAGAMENTO';return `<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between"><div><h3 class="text-sm font-semibold">${escapar(m.clientes?.nome||'Cliente')}</h3><p class="text-xs text-slate-500 mt-1">${escapar(m.descricao|| (pag?'Pagamento':'Compra fiada'))}</p><p class="text-[10px] text-slate-600 mt-2">${dataBR(m.criado_em)}${m.vencimento?' • vence '+dataBR(m.vencimento):''}</p></div><strong class="${pag?'text-emerald-400':'text-rose-400'}">${pag?'-':'+'} ${dinheiro(m.valor)}</strong></article>`}
+  async function renderArquivados(){const {data}=await db.from('clientes').select('*').not('arquivado_em','is',null).order('nome');$('lista-arquivados').innerHTML=(data||[]).length?data.map(c=>`<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between items-center"><div><h3 class="font-semibold">${escapar(c.nome)}</h3><p class="text-xs text-slate-500">Saldo preservado: ${dinheiro(c.saldo_devedor)}</p></div><button onclick="restaurar('${c.id}')" class="text-xs bg-indigo-600 px-3 py-2 rounded-lg">Restaurar</button></article>`).join(''):'<p class="text-center text-slate-500 py-12">Nenhum cliente arquivado.</p>'}
+  $('busca').oninput=renderClientes;$('filtro-tipo').onchange=renderMovimentos;
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('[id^=tab-]').forEach(s=>s.classList.add('hidden'));$(`tab-${b.dataset.tab}`).classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>{x.classList.remove('bg-indigo-600');x.classList.add('bg-slate-900')});b.classList.add('bg-indigo-600');b.classList.remove('bg-slate-900')});
+  document.querySelectorAll('[data-fechar]').forEach(b=>b.onclick=()=>modal(b.dataset.fechar,false));
+
+  $('novo-cliente').onclick=()=>modal('modal-cliente');
+  $('cliente-telefone').oninput=e=>{let v=e.target.value.replace(/\D/g,'').slice(0,11);e.target.value=v.length>10?v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3'):v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3')};
+  $('form-cliente').onsubmit=async e=>{e.preventDefault();const b=e.submitter;carregando(b,true);const {error}=await db.from('clientes').insert({nome:$('cliente-nome').value.trim(),telefone:$('cliente-telefone').value.trim(),proprietario_id:usuario.id});carregando(b,false);if(error)return toast(error.message,'erro');e.target.reset();modal('modal-cliente',false);toast('Cliente cadastrado.');carregarTudo()};
+  function abrirLancamento(id){const c=clientes.find(x=>x.id===id)||clienteAberto;if(!c)return;$('lancamento-cliente-id').value=c.id;$('lancamento-cliente').textContent=c.nome;$('form-lancamento').reset();$('lancamento-tipo').value='FIADO';$('campo-vencimento').classList.remove('hidden');modal('modal-detalhe',false);modal('modal-lancamento')}
+  $('lancamento-tipo').onchange=e=>$('campo-vencimento').classList.toggle('hidden',e.target.value==='PAGAMENTO');
+  $('form-lancamento').onsubmit=async e=>{e.preventDefault();const valor=Number($('lancamento-valor').value);if(!(valor>0))return toast('Informe um valor válido.','erro');const c=clientes.find(x=>x.id===$('lancamento-cliente-id').value);if($('lancamento-tipo').value==='PAGAMENTO'&&valor>Number(c.saldo_devedor)&&!confirm('O pagamento é maior que a dívida. O saldo ficará zerado. Deseja continuar?'))return;const b=e.submitter;carregando(b,true);const {error}=await db.rpc('registrar_movimentacao',{p_cliente_id:c.id,p_tipo:$('lancamento-tipo').value,p_valor:valor,p_descricao:$('lancamento-descricao').value.trim()||null,p_vencimento:$('lancamento-tipo').value==='FIADO'?($('lancamento-vencimento').value||null):null});carregando(b,false);if(error)return toast(error.message,'erro');modal('modal-lancamento',false);toast('Movimentação registrada.');carregarTudo()};
+  window.abrirDetalhe=async id=>{clienteAberto=clientes.find(c=>c.id===id);if(!clienteAberto)return;const tx=movimentos.filter(m=>m.cliente_id===id&&!m.cancelado_em);$('detalhe-nome').textContent=clienteAberto.nome;$('detalhe-tel').textContent=clienteAberto.telefone||'Sem telefone';$('detalhe-tel').href=clienteAberto.telefone?`https://wa.me/55${clienteAberto.telefone.replace(/\D/g,'')}`:'#';$('detalhe-saldo').textContent=dinheiro(clienteAberto.saldo_devedor);$('detalhe-movimentos').innerHTML=tx.length?tx.map(itemMovimento).join(''):'<p class="text-xs text-slate-500">Sem movimentações.</p>';$('detalhe-lancar').onclick=()=>abrirLancamento(id);$('detalhe-whats').onclick=cobrarWhatsApp;$('detalhe-pdf').onclick=gerarPDF;modal('modal-detalhe')};
+  function cobrarWhatsApp(){if(!clienteAberto.telefone)return toast('Cadastre o telefone do cliente.','erro');const msg=`Olá, ${clienteAberto.nome}! Passando para informar que seu saldo pendente é de ${dinheiro(clienteAberto.saldo_devedor)}. Qualquer dúvida estou à disposição.`;window.open(`https://wa.me/55${clienteAberto.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank')}
+  function gerarPDF(){const {jsPDF}=window.jspdf,doc=new jsPDF();const tx=movimentos.filter(m=>m.cliente_id===clienteAberto.id&&!m.cancelado_em);doc.setFontSize(18);doc.text('Extrato - Caixa & Fiado',14,18);doc.setFontSize(11);doc.text(`Cliente: ${clienteAberto.nome}`,14,29);doc.text(`Telefone: ${clienteAberto.telefone||'Não informado'}`,14,36);doc.text(`Saldo atual: ${dinheiro(clienteAberto.saldo_devedor)}`,14,43);doc.line(14,48,196,48);let y=57;tx.forEach(m=>{if(y>275){doc.addPage();y=20}doc.text(`${dataBR(m.criado_em)} | ${m.tipo==='PAGAMENTO'?'Pagamento':'Fiado'} | ${dinheiro(m.valor)}`,14,y);doc.setTextColor(90);doc.text((m.descricao||'Sem descrição').slice(0,85),14,y+6);doc.setTextColor(0);y+=15});doc.save(`extrato-${clienteAberto.nome.replace(/[^a-z0-9]/gi,'-')}.pdf`)}
+  $('detalhe-arquivar').onclick=async()=>{if(!confirm('Arquivar este cliente? O histórico será preservado.'))return;const {error}=await db.from('clientes').update({arquivado_em:new Date().toISOString()}).eq('id',clienteAberto.id);if(error)return toast(error.message,'erro');modal('modal-detalhe',false);toast('Cliente arquivado.');carregarTudo()};
+  window.restaurar=async id=>{const {error}=await db.from('clientes').update({arquivado_em:null}).eq('id',id);if(error)return toast(error.message,'erro');toast('Cliente restaurado.');carregarTudo()};
+  iniciar();
+  </script>
+</body>
+</html>
