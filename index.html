@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     *{box-sizing:border-box}body{font-family:Inter,sans-serif}.safe-bottom{padding-bottom:max(1rem,env(safe-area-inset-bottom))}
     .hide-scroll::-webkit-scrollbar{display:none}.modal{animation:fade .18s ease}.card{animation:up .22s ease}
@@ -19,26 +20,21 @@
 <body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-indigo-500">
   <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] hidden max-w-[92%] rounded-xl px-4 py-3 text-sm shadow-2xl"></div>
 
-  <!-- LOGIN / CADASTRO -->
+  <!-- LOGIN -->
   <section id="auth-screen" class="min-h-screen flex items-center justify-center p-5 bg-[radial-gradient(circle_at_top,#3730a3_0,#0f172a_38%,#020617_100%)]">
     <div class="w-full max-w-sm card">
       <div class="text-center mb-7">
         <div class="mx-auto w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-xl mb-4"><i class="fa-solid fa-wallet text-2xl text-indigo-300"></i></div>
-        <h1 class="text-2xl font-extrabold">Caixa & Fiado</h1><p id="auth-subtitle" class="text-sm text-slate-400 mt-1">Seus dados protegidos e organizados</p>
+        <h1 class="text-2xl font-extrabold">Caixa & Fiado</h1><p class="text-sm text-slate-400 mt-1">Seus dados protegidos e organizados</p>
       </div>
       <form id="login-form" class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur">
         <label class="text-xs font-semibold text-slate-400">E-mail</label>
         <input id="login-email" type="email" required autocomplete="email" placeholder="seu@email.com" class="mt-1 mb-4 w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500">
         <label class="text-xs font-semibold text-slate-400">Senha</label>
         <div class="relative mt-1 mb-3"><input id="login-senha" type="password" required minlength="6" autocomplete="current-password" placeholder="Sua senha" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 pr-12 outline-none focus:border-indigo-500"><button type="button" id="toggle-senha" class="absolute right-0 top-0 h-full px-4 text-slate-400" aria-label="Mostrar senha"><i class="fa-regular fa-eye"></i></button></div>
-        <div class="flex justify-between items-center mb-5">
-          <button type="button" id="esqueci" class="text-xs text-indigo-400 hover:text-indigo-300">Esqueci minha senha</button>
-        </div>
-        <button id="entrar" class="w-full rounded-xl py-3 bg-indigo-600 hover:bg-indigo-500 font-bold shadow-lg shadow-indigo-900/40 mb-3"><i class="fa-solid fa-right-to-bracket mr-2"></i><span id="btn-texto">Entrar</span></button>
-        
-        <div class="text-center mt-4">
-          <button type="button" id="alternar-modo" class="text-xs text-slate-400 hover:text-slate-200">Não tem uma conta? <span class="text-indigo-400 font-semibold">Cadastre-se</span></button>
-        </div>
+        <button type="button" id="esqueci" class="text-xs text-indigo-400 hover:text-indigo-300 mb-5">Esqueci minha senha</button>
+        <button id="entrar" class="w-full rounded-xl py-3 bg-indigo-600 hover:bg-indigo-500 font-bold shadow-lg shadow-indigo-900/40"><i class="fa-solid fa-right-to-bracket mr-2"></i>Entrar</button>
+        <p class="text-[11px] text-center text-slate-500 mt-4">Contas novas são liberadas pelo proprietário.</p>
       </form>
     </div>
   </section>
@@ -50,10 +46,12 @@
         <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center"><i class="fa-solid fa-wallet"></i></div><div><h1 class="font-bold leading-tight">Caixa & Fiado</h1><p id="usuario-email" class="text-[10px] text-slate-500 max-w-44 truncate"></p></div></div>
         <div class="flex gap-2"><button id="atualizar" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800" title="Atualizar"><i class="fa-solid fa-rotate"></i></button><button id="sair" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 text-rose-400" title="Sair"><i class="fa-solid fa-right-from-bracket"></i></button></div>
       </div>
-      <nav class="grid grid-cols-3 px-4 gap-2 pb-3 text-xs font-semibold">
+      <nav class="flex overflow-x-auto hide-scroll px-4 gap-2 pb-3 text-xs font-semibold">
         <button data-tab="inicio" class="tab rounded-xl py-2.5 bg-indigo-600"><i class="fa-solid fa-house mr-1"></i> Início</button>
         <button data-tab="movimentos" class="tab rounded-xl py-2.5 bg-slate-900"><i class="fa-solid fa-receipt mr-1"></i> Histórico</button>
-        <button data-tab="arquivados" class="tab rounded-xl py-2.5 bg-slate-900"><i class="fa-solid fa-box-archive mr-1"></i> Arquivados</button>
+        <button data-tab="vencidos" class="tab rounded-xl py-2.5 bg-slate-900"><i class="fa-solid fa-bell mr-1"></i> Vencidos <span id="badge-vencidos" class="ml-1 bg-rose-600 rounded-full px-1.5"></span></button>
+        <button data-tab="caixa" class="tab rounded-xl py-2.5 bg-slate-900"><i class="fa-solid fa-chart-column mr-1"></i> Caixa</button>
+        <button data-tab="admin" class="tab rounded-xl py-2.5 bg-s-900"><i class="fa-solid fa-gear mr-1"></i> Gestão</button>
       </nav>
     </header>
 
@@ -73,7 +71,9 @@
         <div class="flex justify-between items-center mb-4"><div><h2 class="font-bold text-xl">Histórico geral</h2><p class="text-xs text-slate-500">Compras e pagamentos registrados</p></div><select id="filtro-tipo" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs"><option value="">Todos</option><option value="FIADO">Fiados</option><option value="PAGAMENTO">Pagamentos</option></select></div>
         <div id="lista-movimentos" class="space-y-3"></div>
       </section>
-      <section id="tab-arquivados" class="hidden"><h2 class="font-bold text-xl mb-1">Clientes arquivados</h2><p class="text-xs text-slate-500 mb-4">Eles podem ser restaurados sem perder o histórico.</p><div id="lista-arquivados" class="space-y-3"></div></section>
+      <section id="tab-vencidos" class="hidden"><div class="flex justify-between items-center mb-4"><div><h2 class="font-bold text-xl">Contas e parcelas</h2><p class="text-xs text-slate-500">Vencimentos em ordem de prioridade</p></div><button id="nova-parcela" class="bg-indigo-600 rounded-xl px-3 py-2 text-xs font-bold"><i class="fa-solid fa-layer-group"></i> Parcelar</button></div><div class="grid grid-cols-3 gap-2 mb-4 text-center text-xs"><button data-filtro-venc="atrasada" class="filtro-venc bg-rose-600/20 text-rose-400 rounded-xl p-3">Atrasadas</button><button data-filtro-venc="hoje" class="filtro-venc bg-amber-600/20 text-amber-400 rounded-xl p-3">Hoje</button><button data-filtro-venc="futura" class="filtro-venc bg-sky-600/20 text-sky-400 rounded-xl p-3">Próximas</button></div><div id="lista-vencidos" class="space-y-3"></div></section>
+      <section id="tab-caixa" class="hidden"><div class="flex flex-wrap justify-between gap-3 mb-4"><div><h2 class="font-bold text-xl">Fechamento de caixa</h2><p class="text-xs text-slate-500">Resumo por período e forma de pagamento</p></div><div class="flex gap-2"><input id="caixa-inicio" type="date" class="bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs"><input id="caixa-fim" type="date" class="bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs"></div></div><div id="cards-caixa" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"></div><div class="grid sm:grid-cols-3 gap-2 mb-5"><button id="exportar-excel" class="bg-emerald-700 rounded-xl py-3 text-xs font-bold"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button><button id="backup-json" class="bg-sky-700 rounded-xl py-3 text-xs font-bold"><i class="fa-solid fa-download"></i> Fazer backup</button><label class="bg-slate-700 rounded-xl py-3 text-xs font-bold text-center cursor-pointer"><i class="fa-solid fa-upload"></i> Importar backup<input id="importar-json" type="file" accept="application/json" class="hidden"></label></div><div id="formas-caixa" class="space-y-2"></div></section>
+      <section id="tab-admin" class="hidden"><div class="grid lg:grid-cols-2 gap-4"><article class="bg-slate-900 border border-slate-800 rounded-2xl p-5"><div class="flex justify-between mb-4"><div><h2 class="font-bold">Estabelecimento</h2><p class="text-xs text-slate-500">Dados usados em recibos e cobranças</p></div><i class="fa-solid fa-store text-indigo-400"></i></div><form id="form-empresa" class="space-y-3"><input id="empresa-nome" required placeholder="Nome do estabelecimento" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><input id="empresa-documento" placeholder="CPF ou CNPJ" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><input id="empresa-telefone" placeholder="Telefone" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><input id="empresa-endereco" placeholder="Endereço" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><input id="empresa-pix" placeholder="Chave PIX" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><textarea id="empresa-mensagem" rows="2" placeholder="Mensagem padrão de cobrança" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3"></textarea><div class="grid grid-cols-2 gap-3"><input id="empresa-multa" type="number" min="0" step="0.01" placeholder="Multa %" class="bg-slate-950 border border-slate-800 rounded-xl p-3"><input id="empresa-juros" type="number" min="0" step="0.01" placeholder="Juros % ao mês" class="bg-slate-950 border border-slate-800 rounded-xl p-3"></div><label class="block text-xs text-slate-400">Logomarca<input id="empresa-logo" type="file" accept="image/*" class="mt-1 block w-full text-xs"></label><button class="w-full bg-indigo-600 rounded-xl py-3 font-bold">Salvar configurações</button></form></article><article class="bg-slate-900 border border-slate-800 rounded-2xl p-5"><div class="flex justify-between mb-4"><div><h2 class="font-bold">Usuários e permissões</h2><p class="text-xs text-slate-500">Vincule uma conta já criada no Authentication</p></div><i class="fa-solid fa-users-gear text-indigo-400"></i></div><form id="form-membro" class="flex gap-2 mb-4"><input id="membro-email" type="email" required placeholder="E-mail do usuário" class="min-w-0 flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3"><select id="membro-papel" class="bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs"><option value="funcionario">Funcionário</option><option value="admin">Administrador</option></select><button class="bg-indigo-600 rounded-xl px-3"><i class="fa-solid fa-user-plus"></i></button></form><div id="lista-membros" class="space-y-2"></div><hr class="border-slate-800 my-5"><h3 class="font-bold text-sm mb-3">Outras ferramentas</h3><div class="grid grid-cols-2 gap-2"><button id="ver-arquivados" class="bg-slate-800 rounded-xl py-3 text-xs"><i class="fa-solid fa-box-archive"></i> Arquivados</button><button id="instalar-app" class="bg-slate-800 rounded-xl py-3 text-xs"><i class="fa-solid fa-mobile-screen"></i> Instalar aplicativo</button></div><div id="lista-arquivados" class="space-y-2 mt-4 hidden"></div></article></div></section>
     </main>
   </div>
 
@@ -84,246 +84,81 @@
 
   <div id="modal-detalhe" class="modal fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm p-3 items-end sm:items-center justify-center"><div class="card w-full max-w-lg max-h-[90vh] overflow-y-auto hide-scroll bg-slate-900 border border-slate-800 rounded-3xl p-5"><div class="flex justify-between mb-4"><div><h3 id="detalhe-nome" class="font-bold text-lg"></h3><a id="detalhe-tel" class="text-xs text-emerald-400"></a><p id="detalhe-cobranca" class="text-[10px] text-slate-500 mt-1"></p></div><button data-fechar="modal-detalhe"><i class="fa-solid fa-xmark"></i></button></div><div class="rounded-2xl p-4 bg-slate-950 border border-slate-800 mb-4 flex justify-between"><span class="text-sm text-slate-400">Saldo atual</span><strong id="detalhe-saldo" class="text-rose-400"></strong></div><div class="grid grid-cols-4 gap-2 mb-5"><button id="detalhe-lancar" class="bg-indigo-600 rounded-xl py-2.5 text-xs font-bold"><i class="fa-solid fa-plus"></i><span class="hidden sm:inline"> Lançar</span></button><button id="detalhe-editar" class="bg-sky-700 rounded-xl py-2.5 text-xs font-bold"><i class="fa-solid fa-pen"></i><span class="hidden sm:inline"> Editar</span></button><button id="detalhe-whats" class="bg-emerald-600 rounded-xl py-2.5 text-xs font-bold"><i class="fa-brands fa-whatsapp"></i><span class="hidden sm:inline"> Cobrar</span></button><button id="detalhe-pdf" class="bg-slate-700 rounded-xl py-2.5 text-xs font-bold"><i class="fa-solid fa-file-pdf"></i><span class="hidden sm:inline"> Extrato</span></button></div><h4 class="text-xs uppercase text-slate-500 font-bold mb-3">Movimentações</h4><div id="detalhe-movimentos" class="space-y-2"></div><button id="detalhe-arquivar" class="mt-5 w-full border border-rose-900 text-rose-400 rounded-xl py-3 text-xs font-bold"><i class="fa-solid fa-box-archive mr-1"></i> Arquivar cliente</button></div></div>
 
+  <div id="modal-parcelar" class="modal fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm p-4 items-center justify-center"><form id="form-parcelar" class="card w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6"><div class="flex justify-between mb-5"><h3 class="font-bold">Parcelar nova dívida</h3><button type="button" data-fechar="modal-parcelar"><i class="fa-solid fa-xmark"></i></button></div><label class="text-xs text-slate-400">Cliente</label><select id="parcela-cliente" required class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"></select><label class="text-xs text-slate-400">Valor total</label><input id="parcela-valor" type="number" min="0.01" step="0.01" required class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><div class="grid grid-cols-2 gap-3"><div><label class="text-xs text-slate-400">Quantidade</label><input id="parcela-quantidade" type="number" min="2" max="60" value="2" required class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"></div><div><label class="text-xs text-slate-400">1º vencimento</label><input id="parcela-primeiro" type="date" required class="mt-1 mb-4 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"></div></div><input id="parcela-descricao" maxlength="180" placeholder="Descrição da compra" class="mb-5 w-full bg-slate-950 border border-slate-800 rounded-xl p-3"><button class="w-full bg-indigo-600 rounded-xl py-3 font-bold">Criar parcelas</button></form></div>
+
   <script>
-  // CONFIGURAÇÃO DO SUPABASE
-  const SUPABASE_URL = 'https://eloxmouxuwvxkiiuhrxs.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_o9kgSlW5kiF_20bTCkLU1g_r4kUvi-S';
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  let usuario = null, clientes = [], movimentos = [], clienteAberto = null, modoCadastro = false;
-  
-  const $ = id => document.getElementById(id);
-  const dinheiro = v => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const dataBR = v => v ? new Date(v + (v.length === 10 ? 'T12:00:00' : '')).toLocaleDateString('pt-BR') : '';
-  const escapar = v => String(v ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
-  function toast(msg, tipo = 'ok') { const e = $('toast'); e.textContent = msg; e.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-[92%] rounded-xl px-4 py-3 text-sm shadow-2xl ${tipo === 'erro' ? 'bg-rose-600' : 'bg-emerald-600'}`; setTimeout(() => e.classList.add('hidden'), 3500) }
-  function modal(id, abrir = true) { $(id).classList.toggle('hidden', !abrir); $(id).classList.toggle('flex', abrir) }
-  function carregando(btn, sim) { btn.disabled = sim; btn.classList.toggle('opacity-60', sim) }
+  // PREENCHA APENAS COM A URL E A CHAVE ANON/PUBLISHABLE DO SEU SUPABASE.
+  // NUNCA coloque a chave service_role neste arquivo.
+  const SUPABASE_URL='https://eloxmouxuwxvkiiuhrxs.supabase.co';
+  const SUPABASE_ANON_KEY='sb_publishable_o9kgSlW5kiF_20bTCkLU1g_r4kUvi-S';
+  const db=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  let usuario=null,clientes=[],movimentos=[],parcelas=[],empresa=null,perfil=null,clienteAberto=null,filtroVenc='atrasada',instalacaoPendente=null;
+  const $=id=>document.getElementById(id);
+  const dinheiro=v=>(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const dataBR=v=>v?new Date(v+(v.length===10?'T12:00:00':'')).toLocaleDateString('pt-BR'):'';
+  const escapar=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  function toast(msg,tipo='ok'){const e=$('toast');e.textContent=msg;e.className=`fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-[92%] rounded-xl px-4 py-3 text-sm shadow-2xl ${tipo==='erro'?'bg-rose-600':'bg-emerald-600'}`;setTimeout(()=>e.classList.add('hidden'),3500)}
+  function modal(id,abrir=true){$(id).classList.toggle('hidden',!abrir);$(id).classList.toggle('flex',abrir)}
+  function carregando(btn,sim){btn.disabled=sim;btn.classList.toggle('opacity-60',sim)}
 
-  async function iniciar() {
-    const { data: { session } } = await db.auth.getSession();
-    mostrarSessao(session);
-    db.auth.onAuthStateChange((_e, s) => mostrarSessao(s));
-  }
-  function mostrarSessao(session) {
-    usuario = session?.user || null;
-    $('auth-screen').classList.toggle('hidden', !!usuario);
-    $('app').classList.toggle('hidden', !usuario);
-    if (usuario) { $('usuario-email').textContent = usuario.email; carregarTudo(); }
-  }
+  async function iniciar(){if(SUPABASE_URL.startsWith('SUA_')){toast('Configure a URL e a chave do Supabase no arquivo.','erro');return}const {data:{session}}=await db.auth.getSession();mostrarSessao(session);db.auth.onAuthStateChange((_e,s)=>mostrarSessao(s))}
+  async function mostrarSessao(session){usuario=session?.user||null;$('auth-screen').classList.toggle('hidden',!!usuario);$('app').classList.toggle('hidden',!usuario);if(usuario){$('usuario-email').textContent=usuario.email;await carregarIdentidade();carregarTudo()}}
+  async function carregarIdentidade(){const {data}=await db.from('perfis').select('*').eq('id',usuario.id).maybeSingle();perfil=data||{id:usuario.id,dono_id:usuario.id,papel:'proprietario'};document.querySelector('[data-tab="admin"]').classList.toggle('hidden',perfil.papel==='funcionario')}
+  $('login-form').onsubmit=async e=>{e.preventDefault();const b=$('entrar');carregando(b,true);const {error}=await db.auth.signInWithPassword({email:$('login-email').value.trim(),password:$('login-senha').value});carregando(b,false);if(error)toast(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message,'erro')};
+  $('toggle-senha').onclick=()=>{const i=$('login-senha');i.type=i.type==='password'?'text':'password';$('toggle-senha').innerHTML=`<i class="fa-regular fa-eye${i.type==='text'?'-slash':''}"></i>`};
+  $('esqueci').onclick=async()=>{const email=$('login-email').value.trim();if(!email)return toast('Digite seu e-mail primeiro.','erro');const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.href});toast(error?error.message:'Enviamos o link de recuperação para seu e-mail.',error?'erro':'ok')};
+  $('sair').onclick=async()=>{await db.auth.signOut()};$('atualizar').onclick=()=>carregarTudo();
 
-  // Alternar entre Entrar e Cadastrar
-  $('alternar-modo').onclick = () => {
-    modoCadastro = !modoCadastro;
-    $('auth-subtitle').textContent = modoCadastro ? 'Crie sua nova conta de acesso' : 'Seus dados protegidos e organizados';
-    $('btn-texto').textContent = modoCadastro ? 'Cadastrar conta' : 'Entrar';
-    $('alternar-modo').innerHTML = modoCadastro ? 'Já tem uma conta? <span class="text-indigo-400 font-semibold">Entrar</span>' : 'Não tem uma conta? <span class="text-indigo-400 font-semibold">Cadastre-se</span>';
-    $('esqueci').classList.toggle('hidden', modoCadastro);
-  };
+  async function carregarTudo(){const [c,m,p,e]=await Promise.all([db.from('clientes').select('*').is('arquivado_em',null).order('nome'),db.from('movimentacoes').select('*,clientes(nome)').order('criado_em',{ascending:false}).limit(1000),db.from('parcelas').select('*,clientes(nome,telefone)').neq('situacao','CANCELADA').order('vencimento'),db.from('estabelecimentos').select('*').maybeSingle()]);const erro=c.error||m.error||p.error||e.error;if(erro)return toast(erro.message,'erro');clientes=c.data||[];movimentos=m.data||[];parcelas=p.data||[];empresa=e.data||null;renderTudo()}
+  function renderTudo(){renderClientes();renderMovimentos();renderResumo();renderArquivados();renderVencidos();renderCaixa();renderEmpresa();renderMembros();avisarVencidos()}
+  function avisarVencidos(){const hoje=new Date().toISOString().slice(0,10),n=parcelas.filter(p=>p.situacao==='PENDENTE'&&p.vencimento<hoje).length,chave=`aviso-${hoje}`;if(n&&'Notification'in window&&Notification.permission==='granted'&&!sessionStorage.getItem(chave)){new Notification('Caixa & Fiado Pro',{body:`Você tem ${n} parcela(s) vencida(s).`,icon:'./icon.svg'});sessionStorage.setItem(chave,'1')}}
+  function statusCliente(c){const tx=movimentos.filter(m=>m.cliente_id===c.id&&m.tipo==='FIADO'&&!m.cancelado_em);const atras=tx.some(m=>m.vencimento&&m.vencimento<new Date().toISOString().slice(0,10))&&Number(c.saldo_devedor)>0;return atras?'Atrasado':Number(c.saldo_devedor)>0?'Pendente':'Em dia'}
+  function renderResumo(){const total=clientes.reduce((s,c)=>s+Number(c.saldo_devedor||0),0);const inicio=new Date();inicio.setDate(1);inicio.setHours(0,0,0,0);const recebido=movimentos.filter(m=>m.tipo==='PAGAMENTO'&&!m.cancelado_em&&new Date(m.criado_em)>=inicio).reduce((s,m)=>s+Number(m.valor),0);const atras=clientes.filter(c=>statusCliente(c)==='Atrasado').reduce((s,c)=>s+Number(c.saldo_devedor||0),0);$('total-fiado').textContent=dinheiro(total);$('devedores').textContent=`${clientes.filter(c=>Number(c.saldo_devedor)>0).length} clientes devedores`;$('recebido-mes').textContent=dinheiro(recebido);$('atrasadas').textContent=dinheiro(atras)}
+  function renderClientes(){const q=$('busca').value.toLowerCase().trim();const lista=clientes.filter(c=>c.nome.toLowerCase().includes(q));$('contador').textContent=`${lista.length} na lista`;$('lista-clientes').innerHTML=lista.length?lista.map(c=>{const st=statusCliente(c),cor=st==='Atrasado'?'amber':st==='Pendente'?'rose':'emerald';return `<button onclick="abrirDetalhe('${c.id}')" class="card text-left bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-2xl p-4 flex justify-between items-center"><div class="min-w-0"><h3 class="font-semibold truncate">${escapar(c.nome)}</h3><p class="text-xs text-slate-500 mt-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> ${escapar(c.telefone||'Sem telefone')}</p><span class="inline-block mt-2 text-[10px] text-${cor}-400 bg-${cor}-500/10 rounded-md px-2 py-1">${st}</span></div><strong class="${Number(c.saldo_devedor)>0?'text-rose-400':'text-emerald-400'}">${dinheiro(c.saldo_devedor)}</strong></button>`}).join(''):'<div class="col-span-2 text-center text-sm text-slate-500 py-12 border border-dashed border-slate-800 rounded-2xl">Nenhum cliente encontrado.</div>'}
+  function renderMovimentos(){const tipo=$('filtro-tipo').value;const lista=movimentos.filter(m=>!m.cancelado_em&&(!tipo||m.tipo===tipo));$('lista-movimentos').innerHTML=lista.length?lista.map(itemMovimento).join(''):'<p class="text-center text-slate-500 py-12">Nenhuma movimentação.</p>'}
+  function itemMovimento(m){const pag=m.tipo==='PAGAMENTO';return `<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between gap-3"><div><h3 class="text-sm font-semibold">${escapar(m.clientes?.nome||'Cliente')}</h3><p class="text-xs text-slate-500 mt-1">${escapar(m.descricao|| (pag?'Pagamento':'Compra fiada'))}</p><p class="text-[10px] text-slate-600 mt-2">${dataBR(m.criado_em)}${m.vencimento?' • vence '+dataBR(m.vencimento):''}${m.forma_pagamento?' • '+escapar(m.forma_pagamento):''}</p></div><div class="text-right flex-shrink-0"><strong class="block ${pag?'text-emerald-400':'text-rose-400'}">${pag?'-':'+'} ${dinheiro(m.valor)}</strong><button onclick="cancelarMovimento('${m.id}')" class="mt-2 text-[10px] text-slate-500 hover:text-rose-400"><i class="fa-solid fa-ban"></i> Cancelar</button>${pag?`<button onclick="gerarReciboPorId('${m.id}')" class="block ml-auto mt-1 text-[10px] text-indigo-400"><i class="fa-solid fa-receipt"></i> Recibo</button>`:''}</div></article>`}
+  async function renderArquivados(){const {data}=await db.from('clientes').select('*').not('arquivado_em','is',null).order('nome');$('lista-arquivados').innerHTML=(data||[]).length?data.map(c=>`<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between items-center"><div><h3 class="font-semibold">${escapar(c.nome)}</h3><p class="text-xs text-slate-500">Saldo preservado: ${dinheiro(c.saldo_devedor)}</p></div><button onclick="restaurar('${c.id}')" class="text-xs bg-indigo-600 px-3 py-2 rounded-lg">Restaurar</button></article>`).join(''):'<p class="text-center text-slate-500 py-12">Nenhum cliente arquivado.</p>'}
+  $('busca').oninput=renderClientes;$('filtro-tipo').onchange=renderMovimentos;
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('[id^=tab-]').forEach(s=>s.classList.add('hidden'));$(`tab-${b.dataset.tab}`).classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>{x.classList.remove('bg-indigo-600');x.classList.add('bg-slate-900')});b.classList.add('bg-indigo-600');b.classList.remove('bg-slate-900')});
+  document.querySelectorAll('[data-fechar]').forEach(b=>b.onclick=()=>modal(b.dataset.fechar,false));
 
-  $('login-form').onsubmit = async e => {
-    e.preventDefault();
-    const b = $('entrar');
-    carregando(b, true);
-    const email = $('login-email').value.trim();
-    const password = $('login-senha').value;
+  $('novo-cliente').onclick=()=>{ $('form-cliente').reset();$('cliente-id').value='';$('titulo-form-cliente').textContent='Novo cliente';modal('modal-cliente') };
+  $('cliente-telefone').oninput=e=>{let v=e.target.value.replace(/\D/g,'').slice(0,11);e.target.value=v.length>10?v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3'):v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3')};
+  $('cliente-cpf').oninput=e=>{let v=e.target.value.replace(/\D/g,'').slice(0,11);e.target.value=v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/,'$1.$2.$3-$4').replace(/[-.]$/,'')};
+  $('form-cliente').onsubmit=async e=>{e.preventDefault();const b=e.submitter,id=$('cliente-id').value;const dados={nome:$('cliente-nome').value.trim(),telefone:$('cliente-telefone').value.trim()||null,cpf:$('cliente-cpf').value.trim()||null,endereco:$('cliente-endereco').value.trim()||null,limite_credito:$('cliente-limite').value?Number($('cliente-limite').value):null,observacoes:$('cliente-observacoes').value.trim()||null,proprietario_id:perfil.dono_id};carregando(b,true);const {error}=id?await db.from('clientes').update(dados).eq('id',id):await db.from('clientes').insert(dados);carregando(b,false);if(error)return toast(error.message,'erro');e.target.reset();modal('modal-cliente',false);toast(id?'Cliente atualizado.':'Cliente cadastrado.');carregarTudo()};
+  function editarCliente(){const c=clienteAberto;if(!c)return;$('cliente-id').value=c.id;$('cliente-nome').value=c.nome||'';$('cliente-telefone').value=c.telefone||'';$('cliente-cpf').value=c.cpf||'';$('cliente-endereco').value=c.endereco||'';$('cliente-limite').value=c.limite_credito??'';$('cliente-observacoes').value=c.observacoes||'';$('titulo-form-cliente').textContent='Editar cliente';modal('modal-detalhe',false);modal('modal-cliente')}
+  function abrirLancamento(id){const c=clientes.find(x=>x.id===id)||clienteAberto;if(!c)return;$('lancamento-cliente-id').value=c.id;$('lancamento-cliente').textContent=c.nome;$('form-lancamento').reset();$('lancamento-tipo').value='FIADO';$('campo-vencimento').classList.remove('hidden');modal('modal-detalhe',false);modal('modal-lancamento')}
+  $('lancamento-tipo').onchange=e=>{const pag=e.target.value==='PAGAMENTO';$('campo-vencimento').classList.toggle('hidden',pag);$('campo-pagamento').classList.toggle('hidden',!pag)};
+  $('form-lancamento').onsubmit=async e=>{e.preventDefault();const valor=Number($('lancamento-valor').value),tipo=$('lancamento-tipo').value;if(!(valor>0))return toast('Informe um valor válido.','erro');const c=clientes.find(x=>x.id===$('lancamento-cliente-id').value);if(tipo==='FIADO'&&c.limite_credito!=null&&Number(c.saldo_devedor)+valor>Number(c.limite_credito)&&!confirm(`Este lançamento ultrapassa o limite de ${dinheiro(c.limite_credito)}. Deseja continuar?`))return;if(tipo==='PAGAMENTO'&&valor>Number(c.saldo_devedor)&&!confirm('O pagamento é maior que a dívida. O saldo ficará zerado. Deseja continuar?'))return;const b=e.submitter;carregando(b,true);const {data,error}=await db.rpc('registrar_movimentacao',{p_cliente_id:c.id,p_tipo:tipo,p_valor:valor,p_descricao:$('lancamento-descricao').value.trim()||null,p_vencimento:tipo==='FIADO'?($('lancamento-vencimento').value||null):null,p_forma_pagamento:tipo==='PAGAMENTO'?$('lancamento-forma').value:null});if(!error&&tipo==='PAGAMENTO'){const f=$('lancamento-comprovante')?.files?.[0];if(f){const path=`${perfil.dono_id}/pagamentos/${data}-${Date.now()}.${f.name.split('.').pop()}`,up=await db.storage.from('comprovantes').upload(path,f);if(up.error)toast('Pagamento salvo, mas o comprovante não foi enviado.','erro');else await db.rpc('anexar_comprovante',{p_movimentacao_id:data,p_path:path})}}carregando(b,false);if(error)return toast(error.message,'erro');modal('modal-lancamento',false);toast('Movimentação registrada.');await carregarTudo();if(tipo==='PAGAMENTO'&&confirm('Pagamento registrado. Deseja gerar o recibo agora?'))gerarReciboPorId(data)};
+  window.abrirDetalhe=async id=>{clienteAberto=clientes.find(c=>c.id===id);if(!clienteAberto)return;const tx=movimentos.filter(m=>m.cliente_id===id&&!m.cancelado_em);$('detalhe-nome').textContent=clienteAberto.nome;$('detalhe-tel').textContent=clienteAberto.telefone||'Sem telefone';$('detalhe-tel').href=clienteAberto.telefone?`https://wa.me/55${clienteAberto.telefone.replace(/\D/g,'')}`:'#';$('detalhe-cobranca').textContent=clienteAberto.ultima_cobranca_em?`Última cobrança: ${dataBR(clienteAberto.ultima_cobranca_em)}`:'Nenhuma cobrança registrada';$('detalhe-saldo').textContent=dinheiro(clienteAberto.saldo_devedor);$('detalhe-movimentos').innerHTML=tx.length?tx.map(itemMovimento).join(''):'<p class="text-xs text-slate-500">Sem movimentações.</p>';$('detalhe-lancar').onclick=()=>abrirLancamento(id);$('detalhe-editar').onclick=editarCliente;$('detalhe-whats').onclick=cobrarWhatsApp;$('detalhe-pdf').onclick=gerarPDF;modal('modal-detalhe')};
+  async function cobrarWhatsApp(){if(!clienteAberto.telefone)return toast('Cadastre o telefone do cliente.','erro');const msg=`Olá, ${clienteAberto.nome}! Passando para informar que seu saldo pendente é de ${dinheiro(clienteAberto.saldo_devedor)}. Qualquer dúvida estou à disposição.`;const {error}=await db.rpc('registrar_cobranca',{p_cliente_id:clienteAberto.id,p_mensagem:msg});if(error)return toast(error.message,'erro');window.open(`https://wa.me/55${clienteAberto.telefone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank');modal('modal-detalhe',false);carregarTudo()}
+  function gerarPDF(){const {jsPDF}=window.jspdf,doc=new jsPDF();const tx=movimentos.filter(m=>m.cliente_id===clienteAberto.id&&!m.cancelado_em);doc.setFontSize(18);doc.text('Extrato - Caixa & Fiado',14,18);doc.setFontSize(11);doc.text(`Cliente: ${clienteAberto.nome}`,14,29);doc.text(`Telefone: ${clienteAberto.telefone||'Não informado'}`,14,36);doc.text(`Saldo atual: ${dinheiro(clienteAberto.saldo_devedor)}`,14,43);doc.line(14,48,196,48);let y=57;tx.forEach(m=>{if(y>275){doc.addPage();y=20}doc.text(`${dataBR(m.criado_em)} | ${m.tipo==='PAGAMENTO'?'Pagamento':'Fiado'} | ${dinheiro(m.valor)}`,14,y);doc.setTextColor(90);doc.text((m.descricao||'Sem descrição').slice(0,85),14,y+6);doc.setTextColor(0);y+=15});doc.save(`extrato-${clienteAberto.nome.replace(/[^a-z0-9]/gi,'-')}.pdf`)}
+  window.gerarReciboPorId=id=>{const m=movimentos.find(x=>x.id===id);if(!m)return toast('Pagamento não encontrado.','erro');const c=clientes.find(x=>x.id===m.cliente_id)||clienteAberto,{jsPDF}=window.jspdf,doc=new jsPDF();doc.setFontSize(20);doc.text('RECIBO DE PAGAMENTO',105,24,{align:'center'});doc.setFontSize(12);doc.text(`Recibo nº ${String(m.id).slice(0,8).toUpperCase()}`,14,40);doc.text(`Recebemos de: ${c?.nome||'Cliente'}`,14,54);doc.text(`Valor: ${dinheiro(m.valor)}`,14,64);doc.text(`Forma de pagamento: ${m.forma_pagamento||'Não informada'}`,14,74);doc.text(`Referente a: ${m.descricao||'Pagamento de saldo pendente'}`,14,84);doc.text(`Data: ${dataBR(m.criado_em)}`,14,94);doc.text(`Saldo restante: ${dinheiro(m.saldo_posterior)}`,14,104);doc.line(45,145,165,145);doc.text('Assinatura do responsável',105,152,{align:'center'});doc.setFontSize(9);doc.text('Documento gerado pelo sistema Caixa & Fiado Pro',105,280,{align:'center'});doc.save(`recibo-${String(m.id).slice(0,8)}.pdf`)};
+  window.cancelarMovimento=async id=>{const motivo=prompt('Informe o motivo do cancelamento:');if(motivo===null)return;if(motivo.trim().length<3)return toast('Informe uma justificativa válida.','erro');if(!confirm('Confirmar o cancelamento? O saldo será recalculado automaticamente.'))return;const {error}=await db.rpc('cancelar_movimentacao',{p_movimentacao_id:id,p_motivo:motivo.trim()});if(error)return toast(error.message,'erro');modal('modal-detalhe',false);toast('Movimentação cancelada e saldo recalculado.');carregarTudo()};
+  $('detalhe-arquivar').onclick=async()=>{if(!confirm('Arquivar este cliente? O histórico será preservado.'))return;const {error}=await db.from('clientes').update({arquivado_em:new Date().toISOString()}).eq('id',clienteAberto.id);if(error)return toast(error.message,'erro');modal('modal-detalhe',false);toast('Cliente arquivado.');carregarTudo()};
+  window.restaurar=async id=>{const {error}=await db.from('clientes').update({arquivado_em:null}).eq('id',id);if(error)return toast(error.message,'erro');toast('Cliente restaurado.');carregarTudo()};
+  function renderVencidos(){const hoje=new Date().toISOString().slice(0,10);const abertas=parcelas.filter(p=>p.situacao==='PENDENTE');const atrasadas=abertas.filter(p=>p.vencimento<hoje);$('badge-vencidos').textContent=atrasadas.length||'';const lista=abertas.filter(p=>filtroVenc==='atrasada'?p.vencimento<hoje:filtroVenc==='hoje'?p.vencimento===hoje:p.vencimento>hoje);$('lista-vencidos').innerHTML=lista.length?lista.map(p=>{const dias=Math.max(0,Math.floor((new Date(hoje)-new Date(p.vencimento))/86400000));return `<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between gap-3"><div><h3 class="font-semibold">${escapar(p.clientes?.nome)}</h3><p class="text-xs text-slate-500">Parcela ${p.numero}/${p.total_parcelas} • vence ${dataBR(p.vencimento)}</p>${dias?`<p class="text-[10px] text-rose-400 mt-1">${dias} dia(s) em atraso</p>`:''}</div><div class="text-right"><strong class="text-rose-400">${dinheiro(p.valor)}</strong><button onclick="pagarParcela('${p.id}')" class="block mt-2 ml-auto bg-emerald-700 rounded-lg px-2 py-1 text-[10px]">Receber</button></div></article>`}).join(''):'<p class="text-center text-slate-500 py-12">Nenhuma parcela nesta situação.</p>'}
+  document.querySelectorAll('.filtro-venc').forEach(b=>b.onclick=()=>{filtroVenc=b.dataset.filtroVenc;renderVencidos()});
+  $('nova-parcela').onclick=()=>{$('parcela-cliente').innerHTML=clientes.map(c=>`<option value="${c.id}">${escapar(c.nome)}</option>`).join('');$('form-parcelar').reset();$('parcela-quantidade').value=2;modal('modal-parcelar')};
+  $('form-parcelar').onsubmit=async e=>{e.preventDefault();const {error}=await db.rpc('criar_parcelamento',{p_cliente_id:$('parcela-cliente').value,p_valor_total:Number($('parcela-valor').value),p_quantidade:Number($('parcela-quantidade').value),p_primeiro_vencimento:$('parcela-primeiro').value,p_descricao:$('parcela-descricao').value.trim()||null});if(error)return toast(error.message,'erro');modal('modal-parcelar',false);toast('Parcelamento criado.');carregarTudo()};
+  window.pagarParcela=async id=>{const forma=prompt('Forma de pagamento: PIX, Dinheiro, Cartão ou Transferência','PIX');if(!forma)return;const {data,error}=await db.rpc('pagar_parcela',{p_parcela_id:id,p_forma_pagamento:forma});if(error)return toast(error.message,'erro');toast('Parcela recebida.');await carregarTudo();if(confirm('Gerar recibo?'))gerarReciboPorId(data)};
 
-    if (modoCadastro) {
-      const { data, error } = await db.auth.signUp({ email, password });
-      carregando(b, false);
-      if (error) return toast(error.message, 'erro');
-      toast('Conta criada com sucesso! Verifique seu e-mail caso necessário.');
-    } else {
-      const { error } = await db.auth.signInWithPassword({ email, password });
-      carregando(b, false);
-      if (error) toast(error.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : error.message, 'erro');
-    }
-  };
+  function periodoCaixa(){const agora=new Date(),ini=$('caixa-inicio').value||new Date(agora.getFullYear(),agora.getMonth(),1).toISOString().slice(0,10),fim=$('caixa-fim').value||agora.toISOString().slice(0,10);return{ini,fim}}
+  function renderCaixa(){const {ini,fim}=periodoCaixa(),lista=movimentos.filter(m=>!m.cancelado_em&&m.criado_em.slice(0,10)>=ini&&m.criado_em.slice(0,10)<=fim),fiado=lista.filter(m=>m.tipo==='FIADO').reduce((s,m)=>s+Number(m.valor),0),recebido=lista.filter(m=>m.tipo==='PAGAMENTO').reduce((s,m)=>s+Number(m.valor),0),cancelados=movimentos.filter(m=>m.cancelado_em&&m.cancelado_em.slice(0,10)>=ini&&m.cancelado_em.slice(0,10)<=fim).reduce((s,m)=>s+Number(m.valor),0);$('cards-caixa').innerHTML=[['Vendido fiado',fiado,'rose'],['Recebido',recebido,'emerald'],['Cancelado',cancelados,'amber'],['Saldo do período',recebido-fiado,'indigo']].map(x=>`<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4"><p class="text-[10px] text-slate-500 uppercase">${x[0]}</p><strong class="text-${x[2]}-400">${dinheiro(x[1])}</strong></article>`).join('');const formas={};lista.filter(m=>m.tipo==='PAGAMENTO').forEach(m=>formas[m.forma_pagamento||'Não informada']=(formas[m.forma_pagamento||'Não informada']||0)+Number(m.valor));$('formas-caixa').innerHTML=Object.entries(formas).map(([k,v])=>`<div class="flex justify-between bg-slate-900 rounded-xl p-3 text-sm"><span>${escapar(k)}</span><strong>${dinheiro(v)}</strong></div>`).join('')||'<p class="text-center text-slate-500">Sem recebimentos no período.</p>'}
+  $('caixa-inicio').onchange=renderCaixa;$('caixa-fim').onchange=renderCaixa;
+  $('exportar-excel').onclick=()=>{const {ini,fim}=periodoCaixa(),dados=movimentos.filter(m=>m.criado_em.slice(0,10)>=ini&&m.criado_em.slice(0,10)<=fim).map(m=>({Data:dataBR(m.criado_em),Cliente:m.clientes?.nome,Tipo:m.tipo,Valor:Number(m.valor),Forma:m.forma_pagamento||'',Descricao:m.descricao||'',Cancelado:m.cancelado_em?'Sim':'Não'})),ws=XLSX.utils.json_to_sheet(dados),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Movimentações');XLSX.writeFile(wb,`caixa-${ini}-a-${fim}.xlsx`)};
+  $('backup-json').onclick=()=>{const blob=new Blob([JSON.stringify({versao:1,exportado_em:new Date().toISOString(),clientes,movimentos,parcelas,empresa},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`backup-caixa-fiado-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href)};
+  $('importar-json').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const b=JSON.parse(await f.text());if(!Array.isArray(b.clientes)||!Array.isArray(b.movimentos))throw Error();if(!confirm(`Importar backup com ${b.clientes.length} clientes? Registros existentes com o mesmo código serão atualizados.`))return;const {error}=await db.rpc('importar_backup',{p_backup:b});if(error)throw error;toast('Backup importado.');carregarTudo()}catch(err){toast(err.message||'Arquivo de backup inválido.','erro')}};
 
-  $('toggle-senha').onclick = () => { const i = $('login-senha'); i.type = i.type === 'password' ? 'text' : 'password'; $('toggle-senha').innerHTML = `<i class="fa-regular fa-eye${i.type === 'text' ? '-slash' : ''}"></i>`; };
-  $('esqueci').onclick = async () => {
-    const email = $('login-email').value.trim();
-    if (!email) return toast('Digite seu e-mail primeiro.', 'erro');
-    const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: location.href });
-    toast(error ? error.message : 'Enviamos o link de recuperação para seu e-mail.', error ? 'erro' : 'ok');
-  };
-  $('sair').onclick = async () => { await db.auth.signOut() };
-  $('atualizar').onclick = () => carregarTudo();
-
-  async function carregarTudo() {
-    const [c, m] = await Promise.all([
-      db.from('clientes').select('*').is('arquivado_em', null).order('nome'),
-      db.from('movimentacoes').select('*,clientes(nome)').order('criado_em', { ascending: false }).limit(500)
-    ]);
-    if (c.error || m.error) return toast((c.error || m.error).message, 'erro');
-    clientes = c.data || [];
-    movimentos = m.data || [];
-    renderTudo();
-  }
-  function renderTudo() { renderClientes(); renderMovimentos(); renderResumo(); renderArquivados(); }
-  function statusCliente(c) {
-    const tx = movimentos.filter(m => m.cliente_id === c.id && m.tipo === 'FIADO' && !m.cancelado_em);
-    const atras = tx.some(m => m.vencimento && m.vencimento < new Date().toISOString().slice(0, 10)) && Number(c.saldo_devedor) > 0;
-    return atras ? 'Atrasado' : Number(c.saldo_devedor) > 0 ? 'Pendente' : 'Em dia';
-  }
-  function renderResumo() {
-    const total = clientes.reduce((s, c) => s + Number(c.saldo_devedor || 0), 0);
-    const inicio = new Date(); inicio.setDate(1); inicio.setHours(0, 0, 0, 0);
-    const recebido = movimentos.filter(m => m.tipo === 'PAGAMENTO' && !m.cancelado_em && new Date(m.criado_em) >= inicio).reduce((s, m) => s + Number(m.valor), 0);
-    const atras = clientes.filter(c => statusCliente(c) === 'Atrasado').reduce((s, c) => s + Number(c.saldo_devedor || 0), 0);
-    $('total-fiado').textContent = dinheiro(total);
-    $('devedores').textContent = `${clientes.filter(c => Number(c.saldo_devedor) > 0).length} clientes devedores`;
-    $('recebido-mes').textContent = dinheiro(recebido);
-    $('atrasadas').textContent = dinheiro(atras);
-  }
-  function renderClientes() {
-    const q = $('busca').value.toLowerCase().trim();
-    const lista = clientes.filter(c => c.nome.toLowerCase().includes(q));
-    $('contador').textContent = `${lista.length} na lista`;
-    $('lista-clientes').innerHTML = lista.length ? lista.map(c => {
-      const st = statusCliente(c), cor = st === 'Atrasado' ? 'amber' : st === 'Pendente' ? 'rose' : 'emerald';
-      return `<button onclick="abrirDetalhe('${c.id}')" class="card text-left bg-slate-900 border border-slate-800 hover:border-indigo-500 rounded-2xl p-4 flex justify-between items-center"><div class="min-w-0"><h3 class="font-semibold truncate">${escapar(c.nome)}</h3><p class="text-xs text-slate-500 mt-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> ${escapar(c.telefone || 'Sem telefone')}</p><span class="inline-block mt-2 text-[10px] text-${cor}-400 bg-${cor}-500/10 rounded-md px-2 py-1">${st}</span></div><strong class="${Number(c.saldo_devedor) > 0 ? 'text-rose-400' : 'text-emerald-400'}">${dinheiro(c.saldo_devedor)}</strong></button>`;
-    }).join('') : '<div class="col-span-2 text-center text-sm text-slate-500 py-12 border border-dashed border-slate-800 rounded-2xl">Nenhum cliente encontrado.</div>';
-  }
-  function renderMovimentos() {
-    const tipo = $('filtro-tipo').value;
-    const lista = movimentos.filter(m => !m.cancelado_em && (!tipo || m.tipo === tipo));
-    $('lista-movimentos').innerHTML = lista.length ? lista.map(itemMovimento).join('') : '<p class="text-center text-slate-500 py-12">Nenhuma movimentação.</p>';
-  }
-  function itemMovimento(m) {
-    const pag = m.tipo === 'PAGAMENTO';
-    return `<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between gap-3"><div><h3 class="text-sm font-semibold">${escapar(m.clientes?.nome || 'Cliente')}</h3><p class="text-xs text-slate-500 mt-1">${escapar(m.descricao || (pag ? 'Pagamento' : 'Compra fiada'))}</p><p class="text-[10px] text-slate-600 mt-2">${dataBR(m.criado_em)}${m.vencimento ? ' • vence ' + dataBR(m.vencimento) : ''}${m.forma_pagamento ? ' • ' + escapar(m.forma_pagamento) : ''}</p></div><div class="text-right flex-shrink-0"><strong class="block ${pag ? 'text-emerald-400' : 'text-rose-400'}">${pag ? '-' : '+'} ${dinheiro(m.valor)}</strong><button onclick="cancelarMovimento('${m.id}')" class="mt-2 text-[10px] text-slate-500 hover:text-rose-400"><i class="fa-solid fa-ban"></i> Cancelar</button>${pag ? `<button onclick="gerarReciboPorId('${m.id}')" class="block ml-auto mt-1 text-[10px] text-indigo-400"><i class="fa-solid fa-receipt"></i> Recibo</button>` : ''}</div></article>`;
-  }
-  async function renderArquivados() {
-    const { data } = await db.from('clientes').select('*').not('arquivado_em', 'is', null).order('nome');
-    $('lista-arquivados').innerHTML = (data || []).length ? data.map(c => `<article class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between items-center"><div><h3 class="font-semibold">${escapar(c.nome)}</h3><p class="text-xs text-slate-500">Saldo preservado: ${dinheiro(c.saldo_devedor)}</p></div><button onclick="restaurar('${c.id}')" class="text-xs bg-indigo-600 px-3 py-2 rounded-lg">Restaurar</button></article>`).join('') : '<p class="text-center text-slate-500 py-12">Nenhum cliente arquivado.</p>';
-  }
-  $('busca').oninput = renderClientes;
-  $('filtro-tipo').onchange = renderMovimentos;
-  document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
-    document.querySelectorAll('[id^=tab-]').forEach(s => s.classList.add('hidden'));
-    $(`tab-${b.dataset.tab}`).classList.remove('hidden');
-    document.querySelectorAll('.tab').forEach(x => { x.classList.remove('bg-indigo-600'); x.classList.add('bg-slate-900') });
-    b.classList.add('bg-indigo-600'); b.classList.remove('bg-slate-900');
-  });
-  document.querySelectorAll('[data-fechar]').forEach(b => b.onclick = () => modal(b.dataset.fechar, false));
-
-  $('novo-cliente').onclick = () => { $('form-cliente').reset(); $('cliente-id').value = ''; $('titulo-form-cliente').textContent = 'Novo cliente'; modal('modal-cliente'); };
-  $('cliente-telefone').oninput = e => { let v = e.target.value.replace(/\D/g, '').slice(0, 11); e.target.value = v.length > 10 ? v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3') : v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3'); };
-  $('cliente-cpf').oninput = e => { let v = e.target.value.replace(/\D/g, '').slice(0, 11); e.target.value = v.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/[-.]$/, ''); };
-  $('form-cliente').onsubmit = async e => {
-    e.preventDefault();
-    const b = e.submitter, id = $('cliente-id').value;
-    const dados = { nome: $('cliente-nome').value.trim(), telefone: $('cliente-telefone').value.trim() || null, cpf: $('cliente-cpf').value.trim() || null, endereco: $('cliente-endereco').value.trim() || null, limite_credito: $('cliente-limite').value ? Number($('cliente-limite').value) : null, observacoes: $('cliente-observacoes').value.trim() || null, proprietario_id: usuario.id };
-    carregando(b, true);
-    const { error } = id ? await db.from('clientes').update(dados).eq('id', id) : await db.from('clientes').insert(dados);
-    carregando(b, false);
-    if (error) return toast(error.message, 'erro');
-    e.target.reset(); modal('modal-cliente', false); toast(id ? 'Cliente atualizado.' : 'Cliente cadastrado.'); carregarTudo();
-  };
-  function editarCliente() {
-    const c = clienteAberto; if (!c) return;
-    $('cliente-id').value = c.id; $('cliente-nome').value = c.nome || ''; $('cliente-telefone').value = c.telefone || ''; $('cliente-cpf').value = c.cpf || ''; $('cliente-endereco').value = c.endereco || ''; $('cliente-limite').value = c.limite_credito ?? ''; $('cliente-observacoes').value = c.observacoes || '';
-    $('titulo-form-cliente').textContent = 'Editar cliente'; modal('modal-detalhe', false); modal('modal-cliente');
-  }
-  function abrirLancamento(id) {
-    const c = clientes.find(x => x.id === id) || clienteAberto; if (!c) return;
-    $('lancamento-cliente-id').value = c.id; $('lancamento-cliente').textContent = c.nome; $('form-lancamento').reset(); $('lancamento-tipo').value = 'FIADO'; $('campo-vencimento').classList.remove('hidden');
-    modal('modal-detalhe', false); modal('modal-lancamento');
-  }
-  $('lancamento-tipo').onchange = e => { const pag = e.target.value === 'PAGAMENTO'; $('campo-vencimento').classList.toggle('hidden', pag); $('campo-pagamento').classList.toggle('hidden', !pag); };
-  $('form-lancamento').onsubmit = async e => {
-    e.preventDefault();
-    const valor = Number($('lancamento-valor').value), tipo = $('lancamento-tipo').value;
-    if (!(valor > 0)) return toast('Informe um valor válido.', 'erro');
-    const c = clientes.find(x => x.id === $('lancamento-cliente-id').value);
-    if (tipo === 'FIADO' && c.limite_credito != null && Number(c.saldo_devedor) + valor > Number(c.limite_credito) && !confirm(`Este lançamento ultrapassa o limite de ${dinheiro(c.limite_credito)}. Deseja continuar?`)) return;
-    if (tipo === 'PAGAMENTO' && valor > Number(c.saldo_devedor) && !confirm('O pagamento é maior que a dívida. O saldo ficará zerado. Deseja continuar?')) return;
-    const b = e.submitter; carregando(b, true);
-    const { data, error } = await db.rpc('registrar_movimentacao', { p_cliente_id: c.id, p_tipo: tipo, p_valor: valor, p_descricao: $('lancamento-descricao').value.trim() || null, p_vencimento: tipo === 'FIADO' ? ($('lancamento-vencimento').value || null) : null, p_forma_pagamento: tipo === 'PAGAMENTO' ? $('lancamento-forma').value : null });
-    carregando(b, false);
-    if (error) return toast(error.message, 'erro');
-    modal('modal-lancamento', false); toast('Movimentação registrada.'); await carregarTudo();
-    if (tipo === 'PAGAMENTO' && confirm('Pagamento registrado. Deseja gerar o recibo agora?')) gerarReciboPorId(data);
-  };
-  window.abrirDetalhe = async id => {
-    clienteAberto = clientes.find(c => c.id === id); if (!clienteAberto) return;
-    const tx = movimentos.filter(m => m.cliente_id === id && !m.cancelado_em);
-    $('detalhe-nome').textContent = clienteAberto.nome;
-    $('detalhe-tel').textContent = clienteAberto.telefone || 'Sem telefone';
-    $('detalhe-tel').href = clienteAberto.telefone ? `https://wa.me/55${clienteAberto.telefone.replace(/\D/g, '')}` : '#';
-    $('detalhe-cobranca').textContent = clienteAberto.ultima_cobranca_em ? `Última cobrança: ${dataBR(clienteAberto.ultima_cobranca_em)}` : 'Nenhuma cobrança registrada';
-    $('detalhe-saldo').textContent = dinheiro(clienteAberto.saldo_devedor);
-    $('detalhe-movimentos').innerHTML = tx.length ? tx.map(itemMovimento).join('') : '<p class="text-xs text-slate-500">Sem movimentações.</p>';
-    $('detalhe-lancar').onclick = () => abrirLancamento(id);
-    $('detalhe-editar').onclick = editarCliente;
-    $('detalhe-whats').onclick = cobrarWhatsApp;
-    $('detalhe-pdf').onclick = gerarPDF;
-    modal('modal-detalhe');
-  };
-  async function cobrarWhatsApp() {
-    if (!clienteAberto.telefone) return toast('Cadastre o telefone do cliente.', 'erro');
-    const msg = `Olá, ${clienteAberto.nome}! Passando para informar que seu saldo pendente é de ${dinheiro(clienteAberto.saldo_devedor)}. Qualquer dúvida estou à disposição.`;
-    const { error } = await db.rpc('registrar_cobranca', { p_cliente_id: clienteAberto.id, p_mensagem: msg });
-    if (error) return toast(error.message, 'erro');
-    window.open(`https://wa.me/55${clienteAberto.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
-    modal('modal-detalhe', false); carregarTudo();
-  }
-  function gerarPDF() {
-    const { jsPDF } = window.jspdf, doc = new jsPDF();
-    const tx = movimentos.filter(m => m.cliente_id === clienteAberto.id && !m.cancelado_em);
-    doc.setFontSize(18); doc.text('Extrato - Caixa & Fiado', 14, 18);
-    doc.setFontSize(11);
-    doc.text(`Cliente: ${clienteAberto.nome}`, 14, 29);
-    doc.text(`Telefone: ${clienteAberto.telefone || 'Não informado'}`, 14, 36);
-    doc.text(`Saldo atual: ${dinheiro(clienteAberto.saldo_devedor)}`, 14, 43);
-    doc.line(14, 48, 196, 48);
-    let y = 57;
-    tx.forEach(m => {
-      if (y > 275) { doc.addPage(); y = 20; }
-      doc.text(`${dataBR(m.criado_em)} | ${m.tipo === 'PAGAMENTO' ? 'Pagamento' : 'Fiado'} | ${dinheiro(m.valor)}`, 14, y);
-      doc.setTextColor(90); doc.text((m.descricao || 'Sem descrição').slice(0, 85), 14, y + 6);
-      doc.setTextColor(0); y += 15;
-    });
-    doc.save(`extrato-${clienteAberto.nome.replace(/[^a-z0-9]/gi, '-')}.pdf`);
-  }
-  window.gerarReciboPorId = id => {
-    const m = movimentos.find(x => x.id === id); if (!m) return toast('Pagamento não encontrado.', 'erro');
-    const c = clientes.find(x => x.id === m.cliente_id) || clienteAberto, { jsPDF } = window.jspdf, doc = new jsPDF();
-    doc.setFontSize(20); doc.text('RECIBO DE PAGAMENTO', 105, 24, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`Recibo nº ${String(m.id).slice(0, 8).toUpperCase()}`, 14, 40);
-    doc.text(`Recebemos de: ${c?.nome || 'Cliente'}`, 14, 54);
-    doc.text(`Valor: ${dinheiro(m.valor)}`, 14, 64);
-    doc.text(`Forma de pagamento: ${m.forma_pagamento || 'Não informada'}`, 14, 74);
-    doc.text(`Referente a: ${m.descricao || 'Pagamento de saldo pendente'}`, 14, 84);
-    doc.text(`Data: ${dataBR(m.criado_em)}`, 14, 94);
-    doc.text(`Saldo restante: ${dinheiro(m.saldo_posterior)}`, 14, 104);
-    doc.line(45, 145, 165, 145);
-    doc.text('Assinatura do responsável', 105, 152, { align: 'center' });
-    doc.setFontSize(9);
-    doc.text('Documento gerado pelo sistema Caixa & Fiado Pro', 105, 280, { align: 'center' });
-    doc.save(`recibo-${String(m.id).slice(0, 8)}.pdf`);
-  };
-  window.cancelarMovimento = async id => {
-    const motivo = prompt('Informe o motivo do cancelamento:');
-    if (motivo === null) return;
-    if (motivo.trim().length < 3) return toast('Informe uma justificativa válida.', 'erro');
-    if (!confirm('Confirmar o cancelamento? O saldo será recalculado automaticamente.')) return;
-    const { error } = await db.rpc('cancelar_movimentacao', { p_movimentacao_id: id, p_motivo: motivo.trim() });
-    if (error) return toast(error.message, 'erro');
-    modal('modal-detalhe', false); toast('Movimentação cancelada e saldo recalculado.'); carregarTudo();
-  };
-  $('detalhe-arquivar').onclick = async () => {
-    if (!confirm('Arquivar este cliente? O histórico será preservado.')) return;
-    const { error } = await db.from('clientes').update({ arquivado_em: new Date().toISOString() }).eq('id', clienteAberto.id);
-    if (error) return toast(error.message, 'erro');
-    modal('modal-detalhe', false); toast('Cliente arquivado.'); carregarTudo();
-  };
-  window.restaurar = async id => {
-    const { error } = await db.from('clientes').update({ arquivado_em: null }).eq('id', id);
-    if (error) return toast(error.message, 'erro');
-    toast('Cliente restaurado.'); carregarTudo();
-  };
+  function renderEmpresa(){if(!empresa)return;$('empresa-nome').value=empresa.nome||'';$('empresa-documento').value=empresa.documento||'';$('empresa-telefone').value=empresa.telefone||'';$('empresa-endereco').value=empresa.endereco||'';$('empresa-pix').value=empresa.chave_pix||'';$('empresa-mensagem').value=empresa.mensagem_cobranca||'';$('empresa-multa').value=empresa.multa_percentual||'';$('empresa-juros').value=empresa.juros_mes_percentual||''}
+  $('form-empresa').onsubmit=async e=>{e.preventDefault();let logo=empresa?.logo_path||null,f=$('empresa-logo').files[0];if(f){const path=`${perfil.dono_id}/logo-${Date.now()}.${f.name.split('.').pop()}`;const {error}=await db.storage.from('comprovantes').upload(path,f);if(error)return toast(error.message,'erro');logo=path}const dados={proprietario_id:perfil.dono_id,nome:$('empresa-nome').value.trim(),documento:$('empresa-documento').value.trim()||null,telefone:$('empresa-telefone').value.trim()||null,endereco:$('empresa-endereco').value.trim()||null,chave_pix:$('empresa-pix').value.trim()||null,mensagem_cobranca:$('empresa-mensagem').value.trim()||null,multa_percentual:Number($('empresa-multa').value)||0,juros_mes_percentual:Number($('empresa-juros').value)||0,logo_path:logo};const {error}=await db.from('estabelecimentos').upsert(dados,{onConflict:'proprietario_id'});if(error)return toast(error.message,'erro');toast('Configurações salvas.');carregarTudo()};
+  async function renderMembros(){if(!perfil||perfil.papel==='funcionario')return;const {data}=await db.from('perfis').select('id,email,papel,ativo').eq('dono_id',perfil.dono_id);$('lista-membros').innerHTML=(data||[]).map(m=>`<div class="flex justify-between bg-slate-950 rounded-xl p-3 text-xs"><div><strong>${escapar(m.email||'Conta')}</strong><p class="text-slate-500">${m.papel}</p></div>${m.id!==usuario.id?`<button onclick="alternarMembro('${m.id}',${!m.ativo})" class="${m.ativo?'text-rose-400':'text-emerald-400'}">${m.ativo?'Bloquear':'Ativar'}</button>`:''}</div>`).join('')}
+  $('form-membro').onsubmit=async e=>{e.preventDefault();const {error}=await db.rpc('adicionar_membro_por_email',{p_email:$('membro-email').value.trim(),p_papel:$('membro-papel').value});if(error)return toast(error.message,'erro');e.target.reset();toast('Usuário vinculado.');renderMembros()};
+  window.alternarMembro=async(id,ativo)=>{const {error}=await db.from('perfis').update({ativo}).eq('id',id);if(error)return toast(error.message,'erro');renderMembros()};
+  $('ver-arquivados').onclick=()=>$('lista-arquivados').classList.toggle('hidden');
+  $('instalar-app').onclick=()=>toast('No navegador, abra o menu e escolha “Adicionar à tela inicial”.');
+  $('campo-pagamento').insertAdjacentHTML('beforeend','<label class="text-xs text-slate-400">Comprovante (opcional)</label><input id="lancamento-comprovante" type="file" accept="image/*,.pdf" class="mt-1 mb-4 block w-full text-xs">');
+  if('Notification'in window&&Notification.permission==='default')setTimeout(()=>Notification.requestPermission(),5000);
   iniciar();
   </script>
 </body>
